@@ -1,6 +1,6 @@
-use nalgebra::{Vector2, Vector3};
+use nalgebra::Vector3;
 use rand::Rng;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub enum MoleculeType {
@@ -552,12 +552,14 @@ impl SimulationState {
                             // Random chance to produce CO2 based on metabolism rate
                             if rand::thread_rng().gen::<f32>() < 0.01 * metabolism_rate * dt {
                                 // Produce CO2 bubble
-                                let co2_pos = Vector2::new(
+                                let co2_pos = Vector3::new(
                                     mol.pos.x + rand::thread_rng().gen_range(-3.0..3.0),
                                     mol.pos.y + rand::thread_rng().gen_range(-3.0..3.0),
+                                    mol.pos.z + rand::thread_rng().gen_range(-3.0..3.0),
                                 );
 
-                                let co2_vel = Vector2::new(
+                                let co2_vel = Vector3::new(
+                                    rand::thread_rng().gen_range(-0.2..0.2),
                                     rand::thread_rng().gen_range(-0.2..0.2),
                                     rand::thread_rng().gen_range(-0.2..0.2),
                                 );
@@ -568,12 +570,14 @@ impl SimulationState {
 
                                 // Occasionally produce ethanol too
                                 if rand::thread_rng().gen::<f32>() < 0.3 {
-                                    let ethanol_pos = Vector2::new(
+                                    let ethanol_pos = Vector3::new(
                                         mol.pos.x + rand::thread_rng().gen_range(-2.0..2.0),
                                         mol.pos.y + rand::thread_rng().gen_range(-2.0..2.0),
+                                        mol.pos.z + rand::thread_rng().gen_range(-2.0..2.0),
                                     );
 
-                                    let ethanol_vel = Vector2::new(
+                                    let ethanol_vel = Vector3::new(
+                                        rand::thread_rng().gen_range(-0.1..0.1),
                                         rand::thread_rng().gen_range(-0.1..0.1),
                                         rand::thread_rng().gen_range(-0.1..0.1),
                                     );
@@ -615,7 +619,7 @@ impl SimulationState {
     }
 
     fn apply_bond_constraints(&mut self) {
-        let mut forces: HashMap<u64, Vector2<f32>> = HashMap::new();
+        let mut forces: HashMap<u64, Vector3<f32>> = HashMap::new();
 
         for bond in &self.bonds {
             if let (Some(mol_a), Some(mol_b)) = (

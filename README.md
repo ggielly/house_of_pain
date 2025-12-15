@@ -16,16 +16,16 @@ Vaguely.
 
 With graphics that technically exist. The core experience is a journey into the void, a testament to the art of doing nothing, beautifully.
 
-### "Features"
+### Features
 
 * Groundbreakingly Pointless : we've pushed the boundaries of modern technology to create an experience with no discernible goal.
 * Built with Rust : because your existential dread should be memory-safe and blazingly fast.
 * Minimalist Graphics : courtesy of our `pain_graphics` engine, you'll be treated to visuals that make you appreciate the sheer blackness of your monitor.
-* Guaranteed Time Sink : have a deadline? A project to finish? Open the House of Pain and watch that productivity vanish.
+* Guaranteed Time Sink : have a deadline? A project to finish ? Open the House of Pain and watch that productivity vanish.
 
 ### Work in progress
 
-[ ] 3D engine because fick yeah.
+* [ ] 3D engine because fick yeah.
 
 ## Building the Pain
 
@@ -33,17 +33,15 @@ This project requires SDL2. Please see `README_SDL2_WINDOWS.md` for setup instru
 
 ```bash
 # Build the monument to futility
-cargo build --release
+$env:LIB = 'C:\src\house_of_pain\vcpkg\installed\x64-windows\lib;' + $env:LIB; $env:PATH = 'C:\src\house_of_pain\vcpkg\installed\x64-windows\bin;' + $env:PATH; cargo build -v
 
-# Unleash the "experience"
-cargo run --release
-
-$env:LIB = 'C:\src\house_of_pain\vcpkg\installed\x64-windows\lib;' + $env:LIB; $env:PATH = 'C:\src\house_of_pain\vcpkg\installed\x64-windows\bin;' + $env:PATH; cargo clean; cargo build -v
+# Run the pain and unleash the experience
+$env:LIB = 'C:\src\house_of_pain\vcpkg\installed\x64-windows\lib;' + $env:LIB; $env:PATH = 'C:\src\house_of_pain\vcpkg\installed\x64-windows\bin;' + $env:PATH; cargo run
 ```
 
 ## Contributing
 
-Got an idea to make it even more exquisitely pointless? We're hesitantly listening.
+Got an idea to make it even more exquisitely pointless ? We're hesitantly listening.
 
 Please open an issue to discuss your vision of enhanced suffering. Pull requests that accidentally add a useful feature will be rejected with extreme prejudice.
 
