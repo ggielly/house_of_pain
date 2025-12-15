@@ -1,0 +1,10 @@
+[env]
+SDL2_LIB = { value = "C:\\src\\house_of_pain\\vcpkg\\installed\\x64-windows\\lib", force = true }
+SDL2_INCLUDE = { value = "C:\\src\\house_of_pain\\vcpkg\\installed\\x64-windows\\include", force = true }
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-L", "C:\\src\\house_of_pain\\vcpkg\\installed\\x64-windows\\lib"]
+
+[build]
+# Ensure we use the system SDL2 libraries
+target-dir = "target"
