@@ -1,0 +1,9 @@
+[package]
+name = "pain_core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nalgebra = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }

@@ -1,0 +1,9 @@
+[package]
+name = "pain_app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pain_core = { path = "../pain_core" }
+nalgebra = { workspace = true }
+rand = { workspace = true }

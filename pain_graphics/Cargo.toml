@@ -1,0 +1,12 @@
+[package]
+name = "pain_graphics"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Use system SDL2 (no `bundled`) to avoid invoking CMake/Ninja during build.
+# You must have SDL2 development libraries/headers installed on the system.
+sdl2 = { version = "0.33", features = ["gfx", "image", "ttf"] }
+nalgebra = { workspace = true }
+pain_core = { path = "../pain_core" }
+rand = { workspace = true }
