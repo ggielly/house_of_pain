@@ -1,4 +1,4 @@
-use nalgebra::Vector2;
+use nalgebra::{Vector2, Vector3};
 use rand::Rng;
 use std::collections::{HashMap, HashSet};
 
@@ -18,8 +18,8 @@ pub enum MoleculeType {
 #[derive(Debug, Clone)]
 pub struct Molecule {
     pub id: u64,
-    pub pos: Vector2<f32>,
-    pub velocity: Vector2<f32>,
+    pub pos: Vector3<f32>,
+    pub velocity: Vector3<f32>,
     pub mol_type: MoleculeType,
 }
 
@@ -31,18 +31,19 @@ pub struct Bond {
 }
 
 #[derive(Debug)]
-pub struct SpatialGrid {
+pub struct SpatialGrid3D {
     cell_size: f32,
-    grid: HashMap<(i32, i32), Vec<u64>>,
+    grid: HashMap<(i32, i32, i32), Vec<u64>>,
     molecules: HashMap<u64, Molecule>,
     next_id: u64,
 }
 
 pub struct SimulationState {
-    pub grid: SpatialGrid,
+    pub grid: SpatialGrid3D,
     pub bonds: Vec<Bond>,
     pub width: f32,
     pub height: f32,
+    pub depth: f32,
     pub temperature: f32,      // Influences reaction rates
     pub time_elapsed: f32,     // Time elapsed in seconds
     pub recipe_hydration: f32, // Hydration percentage (0.65 to 0.90)
@@ -54,9 +55,9 @@ pub struct SimulationState {
 }
 
 impl Molecule {
-    pub fn new(mol_type: MoleculeType, pos: Vector2<f32>, velocity: Vector2<f32>) -> Self {
+    pub fn new(mol_type: MoleculeType, pos: Vector3<f32>, velocity: Vector3<f32>) -> Self {
         Molecule {
-            id: 0, // Will be assigned by SpatialGrid
+            id: 0, // Will be assigned by SpatialGrid3D
             pos,
             velocity,
             mol_type,
@@ -92,9 +93,9 @@ impl Molecule {
     }
 }
 
-impl SpatialGrid {
-    pub fn new(width: f32, height: f32, cell_size: f32) -> Self {
-        SpatialGrid {
+impl SpatialGrid3D {
+    pub fn new(width: f32, height: f32, depth: f32, cell_size: f32) -> Self {
+        SpatialGrid3D {
             cell_size,
             grid: HashMap::new(),
             molecules: HashMap::new(),
@@ -118,26 +119,29 @@ impl SpatialGrid {
         id
     }
 
-    pub fn get_cell_coords(&self, pos: Vector2<f32>) -> (i32, i32) {
+    pub fn get_cell_coords(&self, pos: Vector3<f32>) -> (i32, i32, i32) {
         (
             (pos.x / self.cell_size).floor() as i32,
             (pos.y / self.cell_size).floor() as i32,
+            (pos.z / self.cell_size).floor() as i32,
         )
     }
 
-    pub fn get_neighbors(&self, pos: Vector2<f32>) -> Vec<&Molecule> {
+    pub fn get_neighbors(&self, pos: Vector3<f32>) -> Vec<&Molecule> {
         let center_cell = self.get_cell_coords(pos);
         let mut neighbors = Vec::new();
 
-        // Check the center cell and all 8 surrounding cells
+        // Check the center cell and all 26 surrounding cells (3x3x3 cube)
         for dx in -1..=1 {
             for dy in -1..=1 {
-                let cell_coords = (center_cell.0 + dx, center_cell.1 + dy);
+                for dz in -1..=1 {
+                    let cell_coords = (center_cell.0 + dx, center_cell.1 + dy, center_cell.2 + dz);
 
-                if let Some(ids) = self.grid.get(&cell_coords) {
-                    for &id in ids {
-                        if let Some(mol) = self.molecules.get(&id) {
-                            neighbors.push(mol);
+                    if let Some(ids) = self.grid.get(&cell_coords) {
+                        for &id in ids {
+                            if let Some(mol) = self.molecules.get(&id) {
+                                neighbors.push(mol);
+                            }
                         }
                     }
                 }
@@ -157,7 +161,7 @@ impl SpatialGrid {
         }
     }
 
-    pub fn update_molecule_pos(&mut self, id: u64, new_pos: Vector2<f32>) {
+    pub fn update_molecule_pos(&mut self, id: u64, new_pos: Vector3<f32>) {
         if let Some(mol) = self.molecules.get_mut(&id) {
             let old_pos = mol.pos;
             // Update position
@@ -196,12 +200,13 @@ impl SpatialGrid {
 }
 
 impl SimulationState {
-    pub fn new(width: f32, height: f32) -> Self {
+    pub fn new(width: f32, height: f32, depth: f32) -> Self {
         SimulationState {
-            grid: SpatialGrid::new(width, height, 15.0),
+            grid: SpatialGrid3D::new(width, height, depth, 15.0),
             bonds: Vec::new(),
             width,
             height,
+            depth,
             temperature: 25.0, // Default temperature in Celsius
             time_elapsed: 0.0,
             recipe_hydration: 0.72, // 72% hydration
@@ -221,23 +226,25 @@ impl SimulationState {
         self.temperature = 25.0;
 
         // Reset simulation state
-        self.grid = SpatialGrid::new(self.width, self.height, 15.0);
+        self.grid = SpatialGrid3D::new(self.width, self.height, self.depth, 15.0);
         self.bonds.clear();
         self.time_elapsed = 0.0;
         self.salt_added = false; // We'll add salt later
         self.yeast_added = false;
 
         // Add initial flour components: gliadin and glutenin proteins
-        let flour_proteins = (self.width * self.height * 0.002) as usize; // Adjust density as needed
+        let flour_proteins = (self.width * self.height * self.depth * 0.0002) as usize; // Adjust density as needed for 3D
         for _ in 0..flour_proteins {
             let x = rand::thread_rng().gen_range(0.0..self.width);
             let y = rand::thread_rng().gen_range(0.0..self.height);
-            let pos = Vector2::new(x, y);
+            let z = rand::thread_rng().gen_range(0.0..self.depth);
+            let pos = Vector3::new(x, y, z);
 
             // Randomly distribute gliadins and glutens
             let vel_x = rand::thread_rng().gen_range(-0.5..0.5);
             let vel_y = rand::thread_rng().gen_range(-0.5..0.5);
-            let velocity = Vector2::new(vel_x, vel_y);
+            let vel_z = rand::thread_rng().gen_range(-0.5..0.5);
+            let velocity = Vector3::new(vel_x, vel_y, vel_z);
 
             let protein_choice = rand::thread_rng().gen_range(0..100);
             if protein_choice < 40 {
@@ -262,11 +269,13 @@ impl SimulationState {
         for _ in 0..water_amount as usize {
             let x = rand::thread_rng().gen_range(0.0..self.width);
             let y = rand::thread_rng().gen_range(0.0..self.height);
-            let pos = Vector2::new(x, y);
+            let z = rand::thread_rng().gen_range(0.0..self.depth);
+            let pos = Vector3::new(x, y, z);
 
             let vel_x = rand::thread_rng().gen_range(-1.0..1.0);
             let vel_y = rand::thread_rng().gen_range(-1.0..1.0);
-            let velocity = Vector2::new(vel_x, vel_y);
+            let vel_z = rand::thread_rng().gen_range(-1.0..1.0);
+            let velocity = Vector3::new(vel_x, vel_y, vel_z);
 
             let molecule = Molecule::new(MoleculeType::Water, pos, velocity);
             self.grid.insert(molecule);
@@ -275,16 +284,18 @@ impl SimulationState {
 
     pub fn add_salt(&mut self) {
         if !self.salt_added {
-            let salt_amount = (self.width * self.height * 0.0005 * self.recipe_salt) as usize;
+            let salt_amount = (self.width * self.height * self.depth * 0.00005 * self.recipe_salt) as usize;
 
             for _ in 0..salt_amount {
                 let x = rand::thread_rng().gen_range(0.0..self.width);
                 let y = rand::thread_rng().gen_range(0.0..self.height);
-                let pos = Vector2::new(x, y);
+                let z = rand::thread_rng().gen_range(0.0..self.depth);
+                let pos = Vector3::new(x, y, z);
 
                 let vel_x = rand::thread_rng().gen_range(-0.2..0.2);
                 let vel_y = rand::thread_rng().gen_range(-0.2..0.2);
-                let velocity = Vector2::new(vel_x, vel_y);
+                let vel_z = rand::thread_rng().gen_range(-0.2..0.2);
+                let velocity = Vector3::new(vel_x, vel_y, vel_z);
 
                 let molecule = Molecule::new(MoleculeType::Salt, pos, velocity);
                 self.grid.insert(molecule);
@@ -296,16 +307,18 @@ impl SimulationState {
 
     pub fn add_yeast(&mut self) {
         if !self.yeast_added {
-            let yeast_amount = (self.width * self.height * 0.0002 * self.recipe_yeast) as usize;
+            let yeast_amount = (self.width * self.height * self.depth * 0.00002 * self.recipe_yeast) as usize;
 
             for _ in 0..yeast_amount {
                 let x = rand::thread_rng().gen_range(0.0..self.width);
                 let y = rand::thread_rng().gen_range(0.0..self.height);
-                let pos = Vector2::new(x, y);
+                let z = rand::thread_rng().gen_range(0.0..self.depth);
+                let pos = Vector3::new(x, y, z);
 
                 let vel_x = rand::thread_rng().gen_range(-0.1..0.1);
                 let vel_y = rand::thread_rng().gen_range(-0.1..0.1);
-                let velocity = Vector2::new(vel_x, vel_y);
+                let vel_z = rand::thread_rng().gen_range(-0.1..0.1);
+                let velocity = Vector3::new(vel_x, vel_y, vel_z);
 
                 let molecule = Molecule::new(MoleculeType::Yeast, pos, velocity);
                 self.grid.insert(molecule);
@@ -315,11 +328,14 @@ impl SimulationState {
                     rand::thread_rng().gen_range((x - 20.0).max(0.0)..(x + 20.0).min(self.width));
                 let sugar_y =
                     rand::thread_rng().gen_range((y - 20.0).max(0.0)..(y + 20.0).min(self.height));
-                let sugar_pos = Vector2::new(sugar_x, sugar_y);
+                let sugar_z =
+                    rand::thread_rng().gen_range((z - 20.0).max(0.0)..(z + 20.0).min(self.depth));
+                let sugar_pos = Vector3::new(sugar_x, sugar_y, sugar_z);
 
                 let sugar_vel_x = rand::thread_rng().gen_range(-0.1..0.1);
                 let sugar_vel_y = rand::thread_rng().gen_range(-0.1..0.1);
-                let sugar_velocity = Vector2::new(sugar_vel_x, sugar_vel_y);
+                let sugar_vel_z = rand::thread_rng().gen_range(-0.1..0.1);
+                let sugar_velocity = Vector3::new(sugar_vel_x, sugar_vel_y, sugar_vel_z);
 
                 let sugar_molecule = Molecule::new(MoleculeType::Sugar, sugar_pos, sugar_velocity);
                 self.grid.insert(sugar_molecule);
@@ -331,9 +347,9 @@ impl SimulationState {
 
     pub fn apply_force_to_region(
         &mut self,
-        center: Vector2<f32>,
+        center: Vector3<f32>,
         radius: f32,
-        force: Vector2<f32>,
+        force: Vector3<f32>,
     ) {
         let mut mol_ids_to_update = Vec::new();
         let neighbors = self.grid.get_neighbors(center);
@@ -384,6 +400,14 @@ impl SimulationState {
             if mol.pos.y > self.height - mol.radius() {
                 mol.pos.y = self.height - mol.radius();
                 mol.velocity.y = -mol.velocity.y * 0.8;
+            }
+            if mol.pos.z < mol.radius() {
+                mol.pos.z = mol.radius();
+                mol.velocity.z = -mol.velocity.z * 0.8; // Dampening
+            }
+            if mol.pos.z > self.depth - mol.radius() {
+                mol.pos.z = self.depth - mol.radius();
+                mol.velocity.z = -mol.velocity.z * 0.8;
             }
 
             // Apply some friction to slow down movement gradually
@@ -634,7 +658,7 @@ impl SimulationState {
         }
     }
 
-    pub fn get_bond_for_display(&self) -> Vec<(Vector2<f32>, Vector2<f32>)> {
+    pub fn get_bond_for_display(&self) -> Vec<(Vector3<f32>, Vector3<f32>)> {
         let mut bond_lines = Vec::new();
 
         for bond in &self.bonds {
