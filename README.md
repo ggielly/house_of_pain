@@ -10,14 +10,22 @@ It is a monument to the question "we can, but should we?", and the answer is a r
 
 ## So, what does it *do*?
 
-That's the beauty of it. It simulates... things. Vaguely. With graphics that technically exist. The core experience is a journey into the void, a testament to the art of doing nothing, beautifully.
+That's the beauty of it. It simulates... things.
+
+Vaguely.
+
+With graphics that technically exist. The core experience is a journey into the void, a testament to the art of doing nothing, beautifully.
 
 ### "Features"
 
-* Groundbreakingly Pointless**: we've pushed the boundaries of modern technology to create an experience with no discernible goal.
-* Built with Rust**: because your existential dread should be memory-safe and blazingly fast.
-* Minimalist Graphics**: courtesy of our `pain_graphics` engine, you'll be treated to visuals that make you appreciate the sheer blackness of your monitor.
-* Guaranteed Time Sink**: have a deadline? A project to finish? Open the House of Pain and watch that productivity vanish.
+* Groundbreakingly Pointless : we've pushed the boundaries of modern technology to create an experience with no discernible goal.
+* Built with Rust : because your existential dread should be memory-safe and blazingly fast.
+* Minimalist Graphics : courtesy of our `pain_graphics` engine, you'll be treated to visuals that make you appreciate the sheer blackness of your monitor.
+* Guaranteed Time Sink : have a deadline? A project to finish? Open the House of Pain and watch that productivity vanish.
+
+### Work in progress
+
+[ ] 3D engine because fick yeah.
 
 ## Building the Pain
 
