@@ -1,241 +1,216 @@
-use sdl2::event::Event;
-use sdl2::gfx::primitives::*;
+use sdl2::gfx::primitives::DrawRenderer;
 use sdl2::pixels::Color;
-use sdl2::render::Canvas;
-use sdl2::video::Window;
-use nalgebra::Vector2;
-use pain_core::{SimulationState, MoleculeType};
-use rand::Rng;
+use sdl2::rect::{Point, Rect};
+use sdl2::render::{Canvas, TextureCreator};
+use sdl2::ttf::Sdl2TtfContext;
+use sdl2::video::{Window, WindowContext};
 
-pub struct GraphicsEngine {
-    sdl_context: sdl2::Sdl,
+use pain_core::{MoleculeType, SimulationState};
+
+const SCREEN_WIDTH: u32 = 1280;
+const SCREEN_HEIGHT: u32 = 720;
+const SIDE_PANEL_WIDTH: u32 = 280;
+const SIM_WIDTH: u32 = SCREEN_WIDTH - SIDE_PANEL_WIDTH;
+
+pub struct Renderer<'a> {
     canvas: Canvas<Window>,
-    event_pump: sdl2::EventPump,
-    running: bool,
-    recipe_hydration: f32,
-    recipe_salt: f32,
-    recipe_yeast: f32,
-    temperature: f32,
-    autolyse_duration: f32,
-    salt_added: bool,
-    yeast_added: bool,
-    apply_force_pressed: bool,
-    mouse_position: (i32, i32),
+    font: sdl2::ttf::Font<'a, 'a>,
 }
 
-impl GraphicsEngine {
-    pub fn new(width: u32, height: u32) -> Result<Self, String> {
-        let sdl_context = sdl2::init()?;
-        let video_subsystem = sdl_context.video()?;
-
+impl<'a> Renderer<'a> {
+    pub fn new(
+        _sdl_context: &sdl2::Sdl,
+        video_subsystem: &sdl2::VideoSubsystem,
+        ttf_context: &'a Sdl2TtfContext,
+    ) -> Result<Self, String> {
         let window = video_subsystem
-            .window("Bread Simulator - House of Pain", width, height)
+            .window(
+                "House of Pain - Sourdough Simulator",
+                SCREEN_WIDTH,
+                SCREEN_HEIGHT,
+            )
             .position_centered()
-            .opengl()
             .build()
             .map_err(|e| e.to_string())?;
 
-        let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
+        let canvas = window
+            .into_canvas()
+            .accelerated()
+            .present_vsync()
+            .build()
+            .map_err(|e| e.to_string())?;
 
-        // Set draw color to a dark background
-        canvas.set_draw_color(Color::RGB(30, 30, 40));
-        canvas.clear();
-        canvas.present();
+        // Load a font - ensure the path is correct for your system
+        // Using a more generic path might be better, but for now this is explicit.
+        let font_path = "C:/Windows/Fonts/consola.ttf";
+        let font = ttf_context.load_font(font_path, 16)?;
 
-        let event_pump = sdl_context.event_pump()?;
-
-        Ok(GraphicsEngine {
-            sdl_context,
-            canvas,
-            event_pump,
-            running: true,
-            recipe_hydration: 0.72,  // 72%
-            recipe_salt: 0.02,       // 2%
-            recipe_yeast: 0.20,      // 20%
-            temperature: 25.0,       // 25°C
-            autolyse_duration: 1800.0, // 30 minutes in seconds
-            salt_added: false,
-            yeast_added: false,
-            apply_force_pressed: false,
-            mouse_position: (0, 0),
-        })
+        Ok(Renderer { canvas, font })
     }
 
-    pub fn handle_events(&mut self) -> Result<(), String> {
-        for event in self.event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. } => {
-                    self.running = false;
-                }
-                Event::MouseButtonDown { x, y, .. } => {
-                    self.mouse_position = (x, y);
-                    self.apply_force_pressed = true;
-                }
-                Event::MouseMotion { x, y, .. } => {
-                    self.mouse_position = (x, y);
-                }
-                Event::KeyDown { keycode: Some(sdl2::keyboard::Keycode::Space), .. } => {
-                    self.apply_force_pressed = true;
-                }
-                Event::KeyDown { keycode: Some(sdl2::keyboard::Keycode::S), .. } => {
-                    self.salt_added = true;
-                }
-                Event::KeyDown { keycode: Some(sdl2::keyboard::Keycode::Y), .. } => {
-                    self.yeast_added = true;
-                }
-                _ => {}
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn render(&mut self, sim_state: &SimulationState) -> Result<(), String> {
-        self.canvas.set_draw_color(Color::RGB(30, 30, 40));
+    pub fn draw(&mut self, sim_state: &SimulationState) -> Result<(), String> {
+        self.canvas.set_draw_color(Color::RGB(10, 10, 15));
         self.canvas.clear();
 
-        // Draw simulation elements
-        self.render_simulation(sim_state)?;
+        // Draw simulation area
+        self.draw_molecules(sim_state)?;
+        self.draw_bonds(sim_state)?;
 
-        // Draw UI info on screen
-        self.render_info(sim_state)?;
+        // Draw side panel - this is where the borrow checker issues were
+        self.draw_side_panel(sim_state)?;
 
         self.canvas.present();
-
         Ok(())
     }
 
-    fn render_simulation(&mut self, sim_state: &SimulationState) -> Result<(), String> {
-        // Draw bonds first (as background)
-        for (start_pos, end_pos) in sim_state.get_bond_for_display() {
-            let start_x = start_pos.x as i16;
-            let start_y = start_pos.y as i16;
-            let end_x = end_pos.x as i16;
-            let end_y = end_pos.y as i16;
-
-            // Draw bonds as thin white lines
-            self.canvas
-                .line(start_x, start_y, end_x, end_y, Color::RGB(200, 200, 200))?;
+    fn get_molecule_color(&self, mol_type: &MoleculeType) -> Color {
+        match mol_type {
+            MoleculeType::Gliadin => Color::RGB(255, 180, 100), // Light orange
+            MoleculeType::Glutenin { has_free_thiol } => {
+                if *has_free_thiol {
+                    Color::RGB(150, 100, 255) // Purple for reactive
+                } else {
+                    Color::RGB(100, 60, 200) // Darker purple for bonded
+                }
+            }
+            MoleculeType::Water => Color::RGBA(50, 100, 200, 150), // Translucent blue
+            MoleculeType::Yeast => Color::RGB(255, 255, 100),      // Bright yellow
+            MoleculeType::CO2 => Color::RGBA(200, 220, 200, 180),  // Light, almost white bubbles
+            MoleculeType::Ethanol => Color::RGB(200, 100, 200),    // Pinkish-purple
+            MoleculeType::Sugar => Color::RGB(255, 255, 255),      // White
+            MoleculeType::Salt => Color::RGB(100, 200, 180),       // Teal/aqua
+            MoleculeType::Ash => Color::RGB(120, 120, 120),        // Grey
         }
+    }
 
-        // Draw molecules
-        for mol in sim_state.grid.get_all_molecules() {
-            let x = mol.pos.x as i16;
-            let y = mol.pos.y as i16;
-            let radius = mol.radius() as i16;
+    fn draw_molecules(&mut self, sim_state: &SimulationState) -> Result<(), String> {
+        for molecule in sim_state.grid.get_all_molecules() {
+            let color = self.get_molecule_color(&molecule.mol_type);
 
-            // Choose color based on molecule type
-            let color = match &mol.mol_type {
-                MoleculeType::Gliadin => Color::RGB(200, 100, 100),      // Reddish
-                MoleculeType::Glutenin { has_free_thiol } => {
-                    if *has_free_thiol {
-                        Color::RGB(100, 200, 100)  // Greenish (with free thiol)
-                    } else {
-                        Color::RGB(50, 150, 50)    // Darker green (bonded)
-                    }
-                },
-                MoleculeType::Water => Color::RGB(100, 100, 200),       // Blueish
-                MoleculeType::Yeast => Color::RGB(200, 200, 100),       // Yellowish
-                MoleculeType::CO2 => Color::RGB(220, 220, 220),         // Light gray (bubble)
-                MoleculeType::Ethanol => Color::RGB(150, 100, 200),     // Purple
-                MoleculeType::Sugar => Color::RGB(255, 255, 255),       // White
-                MoleculeType::Salt => Color::RGB(240, 240, 240),        // Near-white
-                MoleculeType::Ash => Color::RGB(150, 150, 150),         // Gray
-            };
-
-            // Draw filled circle for the molecule
-            self.canvas.filled_circle(x, y, radius, color)?;
-
-            // Draw a border to make it more visible
-            self.canvas.circle(x, y, radius, Color::RGB(50, 50, 50))?;
+            let radius = molecule.radius();
+            // Use filled_circle from gfx for smooth circles
+            self.canvas.filled_circle(
+                molecule.pos.x as i16,
+                molecule.pos.y as i16,
+                radius as i16,
+                color,
+            )?;
         }
-
         Ok(())
     }
 
-    fn render_info(&mut self, sim_state: &SimulationState) -> Result<(), String> {
-        use sdl2::ttf::{Font, Sdl2TtfContext};
+    fn draw_bonds(&mut self, sim_state: &SimulationState) -> Result<(), String> {
+        self.canvas.set_draw_color(Color::RGB(200, 60, 100)); // Reddish color for bonds
+        let bonds = sim_state.get_bond_for_display();
+        for (start, end) in bonds {
+            self.canvas.draw_line(
+                Point::new(start.x as i32, start.y as i32),
+                Point::new(end.x as i32, end.y as i32),
+            )?;
+        }
+        Ok(())
+    }
 
-        // Initialize font (in a real application, you'd cache this)
-        let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
+    fn draw_side_panel(&mut self, sim_state: &SimulationState) -> Result<(), String> {
+        let panel_x = SIM_WIDTH as i32;
+        let panel_rect = Rect::new(panel_x, 0, SIDE_PANEL_WIDTH, SCREEN_HEIGHT);
+        self.canvas.set_draw_color(Color::RGB(20, 20, 30));
+        self.canvas.fill_rect(panel_rect)?;
 
-        // Load a system font directly from Windows
-        let font = ttf_context.load_font("C:\\Windows\\Fonts\\arial.ttf", 16)
-            .or_else(|_| ttf_context.load_font("C:\\Windows\\Fonts\\calibri.ttf", 16))
-            .or_else(|_| ttf_context.load_font("C:\\Windows\\Fonts\\times.ttf", 16))
-            .or_else(|_| {
-                // If no fonts found, return an error
-                Err("Could not load any system font")
-            }).map_err(|e: &str| e.to_string())?;
+        // Draw dividing line
+        self.canvas.set_draw_color(Color::RGB(50, 50, 60));
+        self.canvas.draw_line(
+            Point::new(panel_x, 0),
+            Point::new(panel_x, SCREEN_HEIGHT as i32),
+        )?;
 
-        // Draw text for simulation information
-        let text = format!("Time: {:.1}s | Molecules: {} | Bonds: {}",
-            sim_state.time_elapsed,
-            sim_state.grid.get_all_molecules().len(),
-            sim_state.bonds.len());
-
-        let surface = font.render(&text)
-            .blended(Color::RGB(255, 255, 255))
-            .map_err(|e| e.to_string())?;
-
+        // --- Display Text ---
         let texture_creator = self.canvas.texture_creator();
-        let texture = texture_creator.create_texture_from_surface(&surface)
-            .map_err(|e| e.to_string())?;
+        let mut y = 20;
+        let line_height = 25;
 
-        let target = sdl2::rect::Rect::new(10, 10, surface.width(), surface.height());
-        self.canvas.copy(&texture, None, Some(target))?;
+        // Helper closure to render a line of text
+        let mut render_line = |text: &str, x_offset: i32, current_y: i32| -> Result<(), String> {
+            if text.is_empty() {
+                return Ok(()); // Skip empty lines
+            }
+            let surface = self
+                .font
+                .render(text)
+                .blended(Color::RGB(220, 220, 220))
+                .map_err(|e| e.to_string())?;
+            let texture = texture_creator
+                .create_texture_from_surface(&surface)
+                .map_err(|e| e.to_string())?;
+            let query = texture.query();
+            self.canvas.copy(
+                &texture,
+                None,
+                Rect::new(x_offset, current_y, query.width, query.height),
+            )?;
+            Ok(())
+        };
 
-        // Draw instructions
-        let instructions = "Controls: Click/Mouse - Mix | Space - Mix | S - Add Salt | Y - Add Yeast";
-        let inst_surface = font.render(instructions)
-            .blended(Color::RGB(200, 200, 200))
-            .map_err(|e| e.to_string())?;
+        render_line("House of Pain", panel_x + 20, y)?;
+        y += line_height * 2;
 
-        let inst_texture = texture_creator.create_texture_from_surface(&inst_surface)
-            .map_err(|e| e.to_string())?;
+        // Stats
+        let stats = collect_stats(sim_state);
+        for (key, value) in stats {
+            let text = if key.is_empty() {
+                "".to_string()
+            } else {
+                format!("{}: {}", key, value)
+            };
+            render_line(&text, panel_x + 20, y)?;
+            y += line_height;
+        }
 
-        let inst_target = sdl2::rect::Rect::new(10, 40, inst_surface.width(), inst_surface.height());
-        self.canvas.copy(&inst_texture, None, Some(inst_target))?;
+        // Controls
+        y += line_height;
+        let controls_text = [
+            "Controls:",
+            "  S - Add Salt",
+            "  Y - Add Yeast",
+            "  C - Fold (Apply Force)",
+            "  R - Reset Simulation",
+        ];
+        for text in &controls_text {
+            render_line(text, panel_x + 20, y)?;
+            y += line_height;
+        }
 
         Ok(())
     }
+}
 
-    pub fn is_running(&self) -> bool {
-        self.running
-    }
+fn collect_stats(sim_state: &SimulationState) -> Vec<(String, String)> {
+    let total_molecules = sim_state.grid.get_all_molecules().len();
+    let yeast_count = sim_state.get_molecules_by_type(&MoleculeType::Yeast).len();
+    let sugar_count = sim_state.get_molecules_by_type(&MoleculeType::Sugar).len();
+    let co2_count = sim_state.get_molecules_by_type(&MoleculeType::CO2).len();
+    let ethanol_count = sim_state
+        .get_molecules_by_type(&MoleculeType::Ethanol)
+        .len();
 
-    pub fn update_simulation_parameters(&mut self, sim_state: &mut SimulationState) {
-        // Update recipe parameters from internal state
-        sim_state.recipe_hydration = self.recipe_hydration;
-        sim_state.recipe_salt = self.recipe_salt;
-        sim_state.recipe_yeast = self.recipe_yeast;
-        sim_state.temperature = self.temperature;
-        sim_state.autolyse_time = self.autolyse_duration;
-
-        // Handle ingredient additions
-        if self.salt_added && !sim_state.salt_added {
-            sim_state.add_salt();
-            self.salt_added = false; // Reset the flag after processing
-        }
-
-        if self.yeast_added && !sim_state.yeast_added {
-            sim_state.add_yeast();
-            self.yeast_added = false; // Reset the flag after processing
-        }
-
-        // Apply force to region where mouse is clicked
-        if self.apply_force_pressed {
-            let mut rng = rand::thread_rng();
-            let (mouse_x, mouse_y) = self.mouse_position;
-            let center = Vector2::new(mouse_x as f32, mouse_y as f32);
-            let radius = 50.0;
-            let force = Vector2::new(
-                (rng.gen::<f32>() - 0.5) * 20.0,
-                (rng.gen::<f32>() - 0.5) * 20.0,
-            ); // Random force direction
-
-            sim_state.apply_force_to_region(center, radius, force);
-            self.apply_force_pressed = false; // Reset the flag after processing
-        }
-    }
+    vec![
+        (
+            "Time".to_string(),
+            format!("{:.1}s", sim_state.time_elapsed),
+        ),
+        (
+            "Temperature".to_string(),
+            format!("{:.1}°C", sim_state.temperature),
+        ),
+        ("Molecules".to_string(), format!("{}", total_molecules)),
+        (
+            "Gluten Bonds".to_string(),
+            format!("{}", sim_state.bonds.len()),
+        ),
+        ("".to_string(), "".to_string()), // Spacer
+        ("Yeast".to_string(), format!("{}", yeast_count)),
+        ("Sugar".to_string(), format!("{}", sugar_count)),
+        ("CO2".to_string(), format!("{}", co2_count)),
+        ("Ethanol".to_string(), format!("{}", ethanol_count)),
+    ]
 }
