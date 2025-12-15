@@ -1,11 +1,12 @@
 use pain_core::SimulationState;
-use pain_graphics::Renderer;
+use pain_graphics::{Renderer, CameraMovement};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::time::Instant;
 
 const SIM_WIDTH: f32 = 1000.0;
 const SIM_HEIGHT: f32 = 720.0;
+const SIM_DEPTH: f32 = 1000.0;
 
 fn main() -> Result<(), String> {
     // --- SDL2 Initialization ---
@@ -17,18 +18,27 @@ fn main() -> Result<(), String> {
     let mut renderer = Renderer::new(&sdl_context, &video_subsystem, &ttf_context)?;
 
     // --- Simulation State Initialization ---
-    let mut sim_state = SimulationState::new(SIM_WIDTH, SIM_HEIGHT);
+    let mut sim_state = SimulationState::new(SIM_WIDTH, SIM_HEIGHT, SIM_DEPTH);
     sim_state.initialize_classic_recipe();
 
-    println!("Bread Simulator - House of Pain initialized!");
-    println!("Starting graphical simulation...");
+    println!("3D Bread Simulator - House of Pain initialized!");
+    println!("Starting 3D graphical simulation...");
 
     // --- Main Loop ---
     let mut event_pump = sdl_context.event_pump()?;
     let mut last_time = Instant::now();
 
     'running: loop {
-        // --- Event Handling ---
+        // --- Time Management ---
+        let now = Instant::now();
+        let dt = (now - last_time).as_secs_f32();
+        last_time = now;
+        let dt = dt.min(0.05); // Cap delta time to prevent physics explosion
+
+        // --- Event Handling & 3D Camera Controls ---
+        renderer.handle_events(&mut event_pump);
+        renderer.update_camera(&sim_state, dt);
+
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -58,9 +68,9 @@ fn main() -> Result<(), String> {
                     keycode: Some(Keycode::C), // 'C' for 'Coil Fold'
                     ..
                 } => {
-                    // Apply a swirling force to simulate folding
-                    let center = nalgebra::Vector2::new(SIM_WIDTH / 2.0, SIM_HEIGHT / 2.0);
-                    let force = nalgebra::Vector2::new(0.0, 30.0); // Downward pull
+                    // Apply a force to simulate folding
+                    let center = nalgebra::Vector3::new(SIM_WIDTH / 2.0, SIM_HEIGHT / 2.0, SIM_DEPTH / 2.0);
+                    let force = nalgebra::Vector3::new(0.0, 30.0, 0.0); // Upward pull
                     sim_state.apply_force_to_region(center, 200.0, force);
                     println!("Fold applied!");
                 }
@@ -68,19 +78,13 @@ fn main() -> Result<(), String> {
                     keycode: Some(Keycode::R),
                     ..
                 } => {
-                    println!("Resetting simulation...");
-                    sim_state = SimulationState::new(SIM_WIDTH, SIM_HEIGHT);
+                    println!("Resetting 3D simulation...");
+                    sim_state = SimulationState::new(SIM_WIDTH, SIM_HEIGHT, SIM_DEPTH);
                     sim_state.initialize_classic_recipe();
                 }
                 _ => {}
             }
         }
-
-        // --- Time Management ---
-        let now = Instant::now();
-        let dt = (now - last_time).as_secs_f32();
-        last_time = now;
-        let dt = dt.min(0.05); // Cap delta time to prevent physics explosion
 
         // --- Simulation Update ---
         sim_state.tick(dt);
@@ -92,6 +96,6 @@ fn main() -> Result<(), String> {
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
 
-    println!("Simulation finished. Goodbye!");
+    println!("3D Simulation finished. Goodbye!");
     Ok(())
 }

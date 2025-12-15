@@ -421,7 +421,6 @@ impl<'a> Renderer<'a> {
     pub fn get_camera_mut(&mut self) -> &mut Camera {
         &mut self.camera
     }
-}
 
     fn get_molecule_color(&self, mol_type: &MoleculeType) -> Color {
         match mol_type {
