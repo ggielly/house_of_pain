@@ -20,7 +20,7 @@ fn main() {
 }
 
 fn create_initial_simulation() -> SimulationState {
-    let mut sim_state = SimulationState::new(SIM_WIDTH, SIM_HEIGHT, SIM_DEPTH);
+    let mut sim_state = SimulationState::new(SIM_WIDTH as f32, SIM_HEIGHT as f32, SIM_DEPTH as f32);
     sim_state.initialize_classic_recipe();
     sim_state
 }

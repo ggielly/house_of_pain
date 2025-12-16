@@ -94,7 +94,7 @@ impl Molecule {
 }
 
 impl SpatialGrid3D {
-    pub fn new(width: f32, height: f32, depth: f32, cell_size: f32) -> Self {
+    pub fn new(_width: f32, _height: f32, _depth: f32, cell_size: f32) -> Self {
         SpatialGrid3D {
             cell_size,
             grid: HashMap::new(),
@@ -233,7 +233,7 @@ impl SimulationState {
         self.yeast_added = false;
 
         // Add initial flour components: gliadin and glutenin proteins
-        let flour_proteins = (self.width * self.height * self.depth * 0.0002) as usize; // Adjust density as needed for 3D
+        let flour_proteins = 200; // Limite stricte pour la démo
         for _ in 0..flour_proteins {
             let x = rand::thread_rng().gen_range(0.0..self.width);
             let y = rand::thread_rng().gen_range(0.0..self.height);
@@ -241,9 +241,9 @@ impl SimulationState {
             let pos = Vector3::new(x, y, z);
 
             // Randomly distribute gliadins and glutens
-            let vel_x = rand::thread_rng().gen_range(-0.5..0.5);
-            let vel_y = rand::thread_rng().gen_range(-0.5..0.5);
-            let vel_z = rand::thread_rng().gen_range(-0.5..0.5);
+            let vel_x = rand::thread_rng().gen_range(-0.1..0.1);
+            let vel_y = rand::thread_rng().gen_range(-0.1..0.1);
+            let vel_z = rand::thread_rng().gen_range(-0.1..0.1);
             let velocity = Vector3::new(vel_x, vel_y, vel_z);
 
             let protein_choice = rand::thread_rng().gen_range(0..100);
@@ -265,16 +265,16 @@ impl SimulationState {
         }
 
         // Add water based on hydration percentage
-        let water_amount = flour_proteins as f32 * self.recipe_hydration;
+        let water_amount = 200; // Limite stricte pour la démo
         for _ in 0..water_amount as usize {
             let x = rand::thread_rng().gen_range(0.0..self.width);
             let y = rand::thread_rng().gen_range(0.0..self.height);
             let z = rand::thread_rng().gen_range(0.0..self.depth);
             let pos = Vector3::new(x, y, z);
 
-            let vel_x = rand::thread_rng().gen_range(-1.0..1.0);
-            let vel_y = rand::thread_rng().gen_range(-1.0..1.0);
-            let vel_z = rand::thread_rng().gen_range(-1.0..1.0);
+            let vel_x = rand::thread_rng().gen_range(-0.2..0.2);
+            let vel_y = rand::thread_rng().gen_range(-0.2..0.2);
+            let vel_z = rand::thread_rng().gen_range(-0.2..0.2);
             let velocity = Vector3::new(vel_x, vel_y, vel_z);
 
             let molecule = Molecule::new(MoleculeType::Water, pos, velocity);

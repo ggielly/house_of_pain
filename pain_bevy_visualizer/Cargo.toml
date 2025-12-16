@@ -1,11 +1,11 @@
 [package]
-name = "pain_app"
+name = "pain_bevy_visualizer"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 bevy = { version = "0.14", default-features = true }
+avian3d = { version = "0.1" }
 pain_core = { path = "../pain_core" }
-pain_bevy_visualizer = { path = "../pain_bevy_visualizer" }
 nalgebra = { workspace = true }
 rand = { workspace = true }
