@@ -12,9 +12,6 @@ fn main() {
             DefaultPlugins,
         ))
         .add_plugins(ParticlePlugin)
-        .insert_resource(SimulationResource {
-            state: create_initial_simulation(),
-        })
         .add_systems(Update, update_simulation_state)
         .run();
 }

@@ -465,7 +465,7 @@ impl SimulationState {
                         if dist < 8.0 {
                             // Reaction distance threshold
                             // Probability of reaction based on temperature and presence of salt
-                            let mut reaction_prob = 0.05; // Base probability
+                            let mut reaction_prob = 0.20; // Augmented base probability (was 0.05)
 
                             // Increase probability with temperature
                             reaction_prob *= (self.temperature / 25.0).max(0.1); // Normalize to 25°C base
