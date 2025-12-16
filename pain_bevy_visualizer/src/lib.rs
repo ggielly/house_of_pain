@@ -1,3 +1,5 @@
+mod time_scale;
+use time_scale::TimeScale;
 use bevy::prelude::*;
 use bevy::asset::AssetServer;
 use bevy::ui::*;
@@ -51,6 +53,7 @@ pub struct ParticlePlugin;
 impl Plugin for ParticlePlugin {
     fn build(&self, app: &mut App) {
         app
+            .init_resource::<TimeScale>()
             .init_resource::<SimulationResource>()
             .add_plugins(PhysicsPlugins::default())
             .add_systems(Startup, setup_ui_panel)
@@ -109,6 +112,7 @@ impl Plugin for ParticlePlugin {
     fn update_ui_panel(
         sim_resource: Res<SimulationResource>,
         ui_text: Res<UiTextEntity>,
+        time_scale: Res<TimeScale>,
         mut text_query: Query<&mut Text>,
         children_query: Query<&Children>,
     ) {
@@ -139,8 +143,8 @@ impl Plugin for ParticlePlugin {
                             "Préparation"
                         };
                         text.sections[0].value = format!(
-                            "House of pain 3D - Simulation\n\n[Appuyez sur S pour ajouter du sel]\n[Appuyez sur Y pour ajouter de la levure]\n\nPhase: {phase}\nTempérature: {temp:.1} °C\nTemps: {time:.1} s\nFarine: {flour}\nEau: {water}\nLevure: {yeast}\nCO₂: {co2}\nEthanol: {ethanol}\nSucre: {sugar}\nSel: {salt}\nCendres: {ash}\nLiaisons gluten: {bonds}",
-                            phase=phase, temp=temp, time=time, flour=flour, water=water, yeast=yeast, co2=co2, ethanol=ethanol, sugar=sugar, salt=salt, ash=ash, bonds=bonds
+                            "House of pain 3D - Simulation\n\n[Appuyez sur S pour ajouter du sel]\n[Appuyez sur Y pour ajouter de la levure]\n[Appuyez sur C pour malaxer la pâte]\n[+/- pour accélérer/ralentir le temps]\n\nFacteur temps: x{:.2}\nPhase: {phase}\nTempérature: {temp:.1} °C\nTemps: {time:.1} s\nFarine: {flour}\nEau: {water}\nLevure: {yeast}\nCO₂: {co2}\nEthanol: {ethanol}\nSucre: {sugar}\nSel: {salt}\nCendres: {ash}\nLiaisons gluten: {bonds}",
+                            time_scale.0, phase=phase, temp=temp, time=time, flour=flour, water=water, yeast=yeast, co2=co2, ethanol=ethanol, sugar=sugar, salt=salt, ash=ash, bonds=bonds
                         );
                     }
                 }
@@ -513,8 +517,18 @@ fn update_bonds(
 fn handle_user_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut sim_resource: ResMut<SimulationResource>,
+    mut time_scale: ResMut<TimeScale>,
     _time: Res<Time>,
 ) {
+    // Accélérer le temps avec +, ralentir avec -
+    if keyboard_input.just_pressed(KeyCode::Plus) || keyboard_input.just_pressed(KeyCode::NumpadAdd) {
+        time_scale.0 = (time_scale.0 * 2.0).min(128.0);
+        println!("Facteur temps: x{}", time_scale.0);
+    }
+    if keyboard_input.just_pressed(KeyCode::Minus) || keyboard_input.just_pressed(KeyCode::NumpadSubtract) {
+        time_scale.0 = (time_scale.0 / 2.0).max(0.125);
+        println!("Facteur temps: x{}", time_scale.0);
+    }
     // Ajouter du sel avec la touche 'S'
     if keyboard_input.just_pressed(KeyCode::KeyS) && !sim_resource.state.salt_added {
         sim_resource.state.add_salt();
