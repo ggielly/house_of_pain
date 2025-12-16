@@ -4,47 +4,46 @@
 
 ## What is this?
 
-Welcome to the House of Pain, a meticulously engineered simulator with a singular, noble purpose: to be absolutely, utterly useless. 
+Welcome to the House of Pain — actually a proudly niche simulator of yeast and sourdough starter dynamics. In plain French: c'est un simulateur de levure/levain pour faire du pain virtuel. Oui, vraiment.
 
-It is a monument to the question "we can, but should we?", and the answer is a resounding "probably not". This project was born from a desire to explore the outer limits of pointlessness, wrapped in a perfectly safe and performant Rust codebase.
+This project models fermentation, proofing, and all the tiny, passive-aggressive decisions a starter makes while you stare at it and wonder if you fed it enough. It's built in Rust because your virtual levain deserves safety, performance, and an existential crisis with no UB.
 
 ## So, what does it *do*?
 
-That's the beauty of it. It simulates... things.
-
-Vaguely.
-
-With graphics that technically exist. The core experience is a journey into the void, a testament to the art of doing nothing, beautifully.
+It simulates the life and times of a bread starter: hydration, temperature, feeding schedule, bubble formation, gluten network optimism, collapse, and the slow, dramatic arc from flour+water to virtual loaf. There are optional graphics for watching the spores of hope rise and fall, and plenty of sliders to lovingly destroy your sourdough's self-esteem.
 
 ### Features
 
-* Groundbreakingly Pointless : we've pushed the boundaries of modern technology to create an experience with no discernible goal.
-* Built with Rust : because your existential dread should be memory-safe and blazingly fast.
-* Minimalist Graphics : courtesy of our `pain_graphics` engine, you'll be treated to visuals that make you appreciate the sheer blackness of your monitor.
-* Guaranteed Time Sink : have a deadline? A project to finish ? Open the House of Pain and watch that productivity vanish.
+- Realistic-ish fermentation model: yeast and lactic bacteria argue in a mathematically plausible way.
+- Feeding schedule simulation: nurture or neglect your starter — consequences are simulated with merciless accuracy.
+- Temperature and hydration controls: watch your dough bloom or sulk depending on thermostat cruelty.
+- `pain_graphics` viewer: minimalist visuals so you can judge your loaf without distraction.
+- Save/Load starter states: preserve traumatic histories, or reset and repeat the cycle of hope.
+- Optional noise, wobble and micro-bubbles: because presentation matters.
 
 ### Work in progress
 
-* [ ] 3D engine because fick yeah.
+- [ ] Improved starter-evolution model (long-term microflora drift)
+- [ ] More realistic gluten network visualization
 
 ## Building the Pain
 
 This project requires SDL2. Please see `README_SDL2_WINDOWS.md` for setup instructions.
 
-```bash
-# Build the monument to futility
-$env:LIB = 'C:\src\house_of_pain\vcpkg\installed\x64-windows\lib;' + $env:LIB; $env:PATH = 'C:\src\house_of_pain\vcpkg\installed\x64-windows\bin;' + $env:PATH; cargo build -v
+```powershell
+# Build the (very serious) sourdough simulator
+$env:LIB = 'C:\src\house_of_pain\vcpkg\installed\x64-windows\lib;' + $env:LIB
+$env:PATH = 'C:\src\house_of_pain\vcpkg\installed\x64-windows\bin;' + $env:PATH
+cargo build -v
 
-# Run the pain and unleash the experience
-$env:LIB = 'C:\src\house_of_pain\vcpkg\installed\x64-windows\lib;' + $env:LIB; $env:PATH = 'C:\src\house_of_pain\vcpkg\installed\x64-windows\bin;' + $env:PATH; cargo run
+# Run the simulator and watch your starter judge you
+cargo run
 ```
 
 ## Contributing
 
-Got an idea to make it even more exquisitely pointless ? We're hesitantly listening.
-
-Please open an issue to discuss your vision of enhanced suffering. Pull requests that accidentally add a useful feature will be rejected with extreme prejudice.
+Have an idea to make the starter fussier or more forgiving? Open an issue or a PR. Useful features will be reluctantly accepted, and genuinely helpful improvements may prompt suspicious rejoicing.
 
 ## License
 
-Licensed under the MIT License. Feel free to inflict this pain on others.
+Licensed under the MIT License. Share the pain, not the blame.

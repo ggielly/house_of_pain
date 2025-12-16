@@ -9,3 +9,6 @@ serde = { version = "1.0", features = ["derive"] }
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[patch.crates-io]
+cmake = { git = "https://github.com/rust-lang/cmake-rs", branch = "master" }
